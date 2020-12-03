@@ -62,6 +62,8 @@ import threading
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_io as tfio
+
 tf.compat.v1.disable_eager_execution()
 
 flags.DEFINE_string('input', default=None, help='Data directory')
@@ -131,14 +133,17 @@ class ImageCoder(object):
         # Initializes function that decodes RGB JPEG data.
         self._decode_jpeg_data = tf.compat.v1.placeholder(dtype=tf.string)
         self._decode_jpeg = tf.image.decode_jpeg(self._decode_jpeg_data, channels=3)
+        # self._decode_jpeg = tfio.experimental.color.rgb_to_lab(self._decode_jpeg_data)
 
     def png_to_jpeg(self, image_data):
         return self._sess.run(self._png_to_jpeg,
                               feed_dict={self._png_data: image_data})
 
     def decode_jpeg(self, image_data):
-        image = self._sess.run(self._decode_jpeg,
-                               feed_dict={self._decode_jpeg_data: image_data})
+        image_jpeg = self._sess.run(self._decode_jpeg,
+                                    feed_dict={self._decode_jpeg_data: image_data})
+        image_jpeg = tf.cast(image_jpeg, tf.float16)
+        image = tfio.experimental.color.rgb_to_lab(image_jpeg)
         assert len(image.shape) == 3
         assert image.shape[2] == 3
         return image
@@ -207,7 +212,7 @@ def _process_image_files_batch(coder, thread_index, ranges, name, filenames,
     # For instance, if num_shards = 128, and the num_threads = 2, then the first
     # thread would produce shards [0, 64).
     num_threads = len(ranges)
-    assert not num_shards % num_threads
+    # assert not num_shards % num_threads
     num_shards_per_batch = int(num_shards / num_threads)
 
     shard_ranges = np.linspace(ranges[thread_index][0],
@@ -331,8 +336,9 @@ def _find_image_files(data_dir, labels_file):
       texts: list of strings; each string is the class, e.g. 'dog'
       labels: list of integer; each integer identifies the ground truth.
   """
-    print('Determining list of input files and labels from %s.' % data_dir)
-    unique_labels = [l.strip() for l in tf.io.gfile.GFile(labels_file, 'r').readlines()]
+    # print('Determining list of input files and labels from %s.' % data_dir)
+    # unique_labels = [l.strip() for l in tf.io.gfile.GFile(labels_file, 'r').readlines()]
+    unique_labels = ['1']
 
     labels = []
     filenames = []
@@ -342,15 +348,19 @@ def _find_image_files(data_dir, labels_file):
     label_index = 1
 
     # Construct the list of JPEG files and labels.
-    for text in unique_labels:
-        jpeg_file_path = '%s/%s/*' % (data_dir, text)
-        matching_files = tf.io.gfile.glob(jpeg_file_path)
+    # for text in unique_labels:
+    # jpeg_file_path = '%s/%s/*' % (data_dir, text)
+    jpeg_file_path = data_dir + '/*'
+    matching_files = tf.io.gfile.glob(jpeg_file_path)
 
-        labels.extend([label_index] * len(matching_files))
-        texts.extend([text] * len(matching_files))
-        filenames.extend(matching_files)
+    # labels.extend([label_index] * len(matching_files))
+    # texts.extend([text] * len(matching_files))
+    filenames.extend(matching_files)
+    for i in range(len(matching_files)):
+        texts.append('1')
+        labels.append(1)
 
-        label_index += 1
+        # label_index += 1
 
     print('Found %d JPEG files across %d labels inside %s.' % (len(filenames), len(unique_labels), data_dir))
     return filenames, texts, labels
@@ -380,12 +390,14 @@ def main(_):
     if not os.path.exists(FLAGS.output):
         os.makedirs(FLAGS.output)
 
-    # Get all files and split it to validation and training data
-    for split in ['train', 'val']:
-        names, texts, labels = _find_image_files(os.path.join(FLAGS.input, split), FLAGS.labels_file)
-        _process_image_files(split, names, texts, labels, FLAGS.shards)
+    # # Get all files and split it to validation and training data
+    # for split in ['train', 'val']:
+    split = 'lab'
+    # names, texts, labels = _find_image_files(os.path.join(FLAGS.input, split), FLAGS.labels_file)
+    names, texts, labels = _find_image_files(FLAGS.input, FLAGS.labels_file)
+    # _process_image_files(split, names, texts, labels, FLAGS.shards)
+    _process_image_files(split, names, texts, labels, len(names))
 
 
 if __name__ == '__main__':
     app.run(main)
-
