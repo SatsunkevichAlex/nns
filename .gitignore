@@ -8,6 +8,12 @@ __pycache__/
 
 images_result/
 images/
+archive/
+food_test/
+food_tfr/
+food_tfr_validation/
+images_result/
+*.pdf
 
 # Distribution / packaging
 .Python

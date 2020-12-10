@@ -1,0 +1,1 @@
+tensorboard --logdir "C:\Users\Alex\Desktop\temp\logs\train_data\20201208-175317"

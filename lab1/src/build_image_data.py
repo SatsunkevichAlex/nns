@@ -59,6 +59,7 @@ import os
 import random
 import sys
 import threading
+from skimage.color import rgb2lab
 
 import numpy as np
 import tensorflow as tf
@@ -135,8 +136,9 @@ class ImageCoder(object):
     def decode_jpeg(self, image_data):
         image_jpeg = self._sess.run(self._decode_jpeg,
                                     feed_dict={self._decode_jpeg_data: image_data})
-        image_jpeg = tf.cast(image_jpeg, tf.float16)
-        image = tfio.experimental.color.rgb_to_lab(image_jpeg)
+        # image_jpeg = tf.cast(image_jpeg, tf.float16)
+        # image = tfio.experimental.color.rgb_to_lab(image_jpeg)
+        image = rgb2lab(image_jpeg)
         assert len(image.shape) == 3
         assert image.shape[2] == 3
         return image
@@ -355,7 +357,7 @@ def main(_):
 
     split = 'lab'
     names, texts = _find_image_files(FLAGS.input)
-    _process_image_files(split, names, texts, len(names))
+    _process_image_files(split, names, texts, 1)
 
 
 if __name__ == '__main__':
