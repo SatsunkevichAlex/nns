@@ -121,7 +121,7 @@ Process finished with exit code 0
 ```
 
 **Графики обучение**
-(https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/graphs.png)
+![LearhGraphs](https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/graphs.png)
 
 **Результат колоризации**
-(https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/images.png)
+![ResultImages](https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/images.png)
