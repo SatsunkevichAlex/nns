@@ -1,6 +1,7 @@
 Набор входных данных: tfr записи изображений еды в lab формате. 
 Набор данных для валидации: tfr записи изображений еды в lab формате.
 
+```
 **Пример вызова скрипта:**
 C:\Python38\python.exe F:/Google-Drive/Университет/магистратура/сорока-лабы/lab2/src/train.py --train \food_tfr --test F:\Google-Drive\Университет\магистратура\сорока-лабы\lab2\archive\validation\food
 2020-12-11 11:09:19.787499: W tensorflow/stream_executor/platform/default/dso_loader.cc:59] Could not load dynamic library 'cudart64_101.dll'; dlerror: cudart64_101.dll not found
@@ -115,9 +116,10 @@ _________________________________________________________________
 None
 
 Process finished with exit code 0
+```
 
 **Графики обучение**
-[https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/graphs.png]
+(https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/graphs.png)
 
 **Результат колоризации**
-[https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/images.png]
+(https://github.com/SatsunkevichAlex/nns/blob/main/lab2/src/images.png)
