@@ -28,7 +28,6 @@ def display_image(log_dir):
     file_list = [str(pp) for pp in glob_path.glob("*")]
 
     train_images = create_dataset(file_list, BATCH_SIZE)
-    # print(train_images)
 
     image = [np.reshape(i[:, :, :, :], (-1, 224, 224, 3)) for i in train_images.as_numpy_iterator()][0]
     l_channel = [np.reshape(i[:, :, :, 0], (-1, 224, 224, 1)) for i in train_images.as_numpy_iterator()][0]
@@ -71,7 +70,7 @@ def create_dataset(filenames, batch_size):
 def build_model():
     model = Sequential()
     model.add(InputLayer(input_shape=(None, None, 1)))
-    model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(1, (3, 3), activation='relu', padding='same', strides=2))
     model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
     model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
     model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
@@ -122,7 +121,7 @@ def main():
     model.fit(
         x=x,
         y=y,
-        epochs=10,
+        epochs=1000,
         validation_data=validation_y.all(),
         callbacks=[
             tf.keras.callbacks.TensorBoard(log_dir),
@@ -138,9 +137,10 @@ def main():
         cur = np.zeros((224, 224, 3))
         cur[:, :, 0] = x[i][:, :, 0]
         cur[:, :, 1:] = output[i]
-        # print(cur.shape)
         with file_writer.as_default():
-          tf.summary.image("{i}-img_result.png".format(i=i), np.reshape(cur, (1, 224, 224, 3)), step=0)
+          tf.summary.image("{i}-img_result.png".format(i=i), np.reshape(cur, (1, 224, 224, 3)), step=4)
+
+    print(model.summary())
 
 
 if __name__ == '__main__':

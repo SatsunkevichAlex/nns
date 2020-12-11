@@ -304,16 +304,6 @@ def _find_image_files(data_dir):
         Assumes that the image data set resides in JPEG files located in
         the following directory structure.
 
-        data_dir/dog/another-image.JPEG
-        data_dir/dog/my-image.jpg
-
-        where 'dog' is the associated with these images.
-
-        contains entries as such:
-          dog
-          cat
-          flower
-
     Returns:
       filenames: list of strings; each string is a path to an image file.
       texts: list of strings; each string is the class, e.g. 'dog'
