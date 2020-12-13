@@ -8,7 +8,7 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
-from keras.layers import Conv2D, UpSampling2D, InputLayer
+from keras.layers import Conv2D, UpSampling2D, InputLayer, Conv2DTranspose, MaxPooling2D
 from keras.models import Sequential
 
 
@@ -69,19 +69,27 @@ def create_dataset(filenames, batch_size):
 
 def build_model():
     model = Sequential()
-    model.add(InputLayer(input_shape=(None, None, 1)))
-    model.add(Conv2D(1, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(32, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(InputLayer(input_shape=(224, 224, 1)))
+
+    model.add(Conv2D(1, (4, 4), activation='relu', padding='same'))
+    model.add(MaxPooling2D((2, 2), padding='same'))
+
+    model.add(Conv2D(32, (4, 4), activation='relu', padding='same'))
+    model.add(MaxPooling2D((2, 2), padding='same'))
+
+    model.add(Conv2D(64, (4, 4), activation='relu', padding='same'))
+    model.add(MaxPooling2D((2, 2), padding='same'))
+
+    model.add(Conv2DTranspose(128, (4, 4), activation='relu', padding='same'))
     model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+
+    model.add(Conv2DTranspose(128, (4, 4), activation='relu', padding='same'))
     model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+
+    model.add(Conv2DTranspose(64, (4, 4), activation='relu', padding='same'))
     model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
+
+    model.add(Conv2DTranspose(2, (4, 4), activation='relu', padding='same'))
 
     return model
 
@@ -121,7 +129,7 @@ def main():
     model.fit(
         x=x,
         y=y,
-        epochs=1000,
+        epochs=200,
         validation_data=validation_y.all(),
         callbacks=[
             tf.keras.callbacks.TensorBoard(log_dir),
