@@ -71,25 +71,19 @@ def build_model():
     model = Sequential()
     model.add(InputLayer(input_shape=(224, 224, 1)))
 
-    model.add(Conv2D(1, (4, 4), activation='relu', padding='same'))
-    model.add(MaxPooling2D((2, 2), padding='same'))
+    model.add(Conv2D(1, (2, 2), activation='relu', padding='same'))
 
-    model.add(Conv2D(32, (4, 4), activation='relu', padding='same'))
-    model.add(MaxPooling2D((2, 2), padding='same'))
+    model.add(Conv2D(32, (2, 2), strides=2, activation='relu', padding='same'))
 
-    model.add(Conv2D(64, (4, 4), activation='relu', padding='same'))
-    model.add(MaxPooling2D((2, 2), padding='same'))
+    model.add(Conv2D(64, (2, 2), strides=2, activation='relu', padding='same'))
 
-    model.add(Conv2DTranspose(128, (4, 4), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(128, (2, 2), strides=2, activation='relu', padding='same'))
 
-    model.add(Conv2DTranspose(128, (4, 4), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2DTranspose(128, (2, 2), strides=2, activation='relu', padding='same'))
 
-    model.add(Conv2DTranspose(64, (4, 4), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2DTranspose(64, (2, 2), strides=2, activation='relu', padding='same'))
 
-    model.add(Conv2DTranspose(2, (4, 4), activation='relu', padding='same'))
+    model.add(Conv2DTranspose(2, (2, 2), strides=2, activation='relu', padding='same'))
 
     return model
 
@@ -129,7 +123,7 @@ def main():
     model.fit(
         x=x,
         y=y,
-        epochs=200,
+        epochs=100,
         validation_data=validation_y.all(),
         callbacks=[
             tf.keras.callbacks.TensorBoard(log_dir),
