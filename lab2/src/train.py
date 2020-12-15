@@ -8,41 +8,43 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
-from keras.layers import Conv2D, UpSampling2D, InputLayer, Conv2DTranspose, MaxPooling2D
+from keras.layers import Conv2D, InputLayer, Conv2DTranspose
 from keras.models import Sequential
+import tensorflow_io as tfio
 
 
 LOG_DIR = 'logs'
 SHUFFLE_BUFFER = 4
-BATCH_SIZE = 256
+BATCH_SIZE = 16
 NUM_CLASSES = 6
-PARALLEL_CALLS=4
+PARALLEL_CALLS = 4
 RESIZE_TO = 224
 TRAINSET_SIZE = 14034
 VALSET_SIZE = 3000
 
+def visualize_images(epoch, model, dataset, writer):
+    item = iter(dataset).next()
 
-def display_image(log_dir):
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    glob_path = Path(current_dir + "/../food_tfr")
-    file_list = [str(pp) for pp in glob_path.glob("*")]
+    l_channel = item[:, :, :, 0]
 
-    train_images = create_dataset(file_list, BATCH_SIZE)
+    target_ab = item[:, :, :, 1:]
+    target_image = np.zeros((BATCH_SIZE, 224, 224, 3))
+    target_image[:, :, :, 0] = l_channel
+    target_image[:, :, :, 1:] = target_ab
 
-    image = [np.reshape(i[:, :, :, :], (-1, 224, 224, 3)) for i in train_images.as_numpy_iterator()][0]
-    l_channel = [np.reshape(i[:, :, :, 0], (-1, 224, 224, 1)) for i in train_images.as_numpy_iterator()][0]
-    ab_channel = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in train_images.as_numpy_iterator()][0]
+    predicted_ab = model(l_channel)
+    predicted_image = np.zeros((BATCH_SIZE, 224, 224, 3))
+    predicted_image[:, :, :, 0] = l_channel
+    predicted_image[:, :, :, 1:] = predicted_ab[:, :, :, :]
 
-    # Creates a file writer for the log directory.
-    file_writer = tf.summary.create_file_writer(log_dir)
+    target_rgb = tfio.experimental.color.lab_to_rgb(target_image)
+    predicted_rgb = tfio.experimental.color.lab_to_rgb(predicted_image)
 
-    # Using the file writer, log the reshaped image.
-    with file_writer.as_default():
-        tf.summary.image("Image", image, step=0)
-        tf.summary.image("Training data L channel", l_channel, step=0)
-        tf.summary.image("Training data a channel", ab_channel, step=0)
-
-    print("Images saved")
+    with writer.as_default():
+        tf.summary.image('Target Lab', np.reshape(target_image, (BATCH_SIZE, 224, 224, 3)), step=epoch)
+        tf.summary.image('Result Lab', np.reshape(predicted_image, (BATCH_SIZE, 224, 224, 3)), step=epoch)
+        tf.summary.image('Target RGB', target_rgb, step=epoch)
+        tf.summary.image('Result RGB', predicted_rgb, step=epoch)
 
 
 def parse_proto_example(proto):
@@ -94,7 +96,6 @@ def main():
     args.add_argument('--test', type=str, help='Glob pattern to collect test tfrecord files')
 
     log_dir = "C:/Users/Alex/Desktop/logs/train_data/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-    display_image(log_dir)
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -116,32 +117,34 @@ def main():
 
     model.compile(
          optimizer=tf.optimizers.SGD(lr=0.01, momentum=0.9),
-         loss=tf.keras.losses.mean_squared_error,
-         metrics=[tf.keras.metrics.categorical_accuracy]
+         loss=tf.keras.losses.mean_squared_error
     )
 
+    file_writer = tf.summary.create_file_writer(log_dir)
     model.fit(
         x=x,
         y=y,
-        epochs=100,
+        epochs=30,
         validation_data=validation_y.all(),
         callbacks=[
             tf.keras.callbacks.TensorBoard(log_dir),
+            tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=lambda epoch, logs: visualize_images(epoch, model, validation_dataset, file_writer)
+            )
         ]
     )
-
-    # Test model
-    output = model.predict(x)
-
-    file_writer = tf.summary.create_file_writer(log_dir)
-    # Output colorizations
-    for i in range(3):
-        cur = np.zeros((224, 224, 3))
-        cur[:, :, 0] = x[i][:, :, 0]
-        cur[:, :, 1:] = output[i]
-        with file_writer.as_default():
-          tf.summary.image("{i}-img_result.png".format(i=i), np.reshape(cur, (1, 224, 224, 3)), step=4)
-
+    #
+    # # Test model
+    # output = model.predict(x)
+    #
+    # # Output colorization
+    # for i in range(3):
+    #     cur = np.zeros((224, 224, 3))
+    #     cur[:, :, 0] = x[i][:, :, 0]
+    #     cur[:, :, 1:] = output[i]
+    #     with file_writer.as_default():
+    #       tf.summary.image("{i}-img_result.png".format(i=i), np.reshape(cur, (1, 224, 224, 3)), 1000)
+    #
     print(model.summary())
 
 

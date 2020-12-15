@@ -131,7 +131,7 @@ class ImageCoder(object):
         # Initializes function that decodes RGB JPEG data.
         self._decode_jpeg_data = tf.compat.v1.placeholder(dtype=tf.string)
         self._decode_jpeg = tf.image.decode_jpeg(self._decode_jpeg_data, channels=3)
-        # self._decode_jpeg = tfio.experimental.color.rgb_to_lab(self._decode_jpeg_data)
+        self._decode_jpeg = tfio.experimental.color.rgb_to_lab(self._decode_jpeg_data)
 
     def decode_jpeg(self, image_data):
         image_jpeg = self._sess.run(self._decode_jpeg,
