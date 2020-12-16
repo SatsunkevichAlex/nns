@@ -15,6 +15,12 @@ food_tfr_validation/
 images_result/
 *.pdf
 temp
+train_jpeg/
+train_tfr/
+validation/
+validation_jpeg/
+validation_tfr/
+data/
 
 # Distribution / packaging
 .Python

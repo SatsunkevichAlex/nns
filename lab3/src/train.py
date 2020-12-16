@@ -24,6 +24,7 @@ VALSET_SIZE = 3000
 config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(allow_growth=True))
 sess = tf.compat.v1.Session(config=config)
 
+
 def visualize_images(epoch, model, dataset, writer):
     item = iter(dataset).next()
 
