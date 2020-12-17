@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 from pathlib import Path
 from keras.layers import Conv2D, InputLayer, Conv2DTranspose
-from keras.layers.experimental.preprocessing import RandomFlip
+from keras.layers.experimental.preprocessing import RandomCrop, Resizing
 from keras.models import Sequential
 import tensorflow_io as tfio
 
@@ -27,28 +27,28 @@ sess = tf.compat.v1.Session(config=config)
 
 
 def visualize_images(epoch, model, dataset, writer):
-    item = iter(dataset).next()[0]
+    item = iter(dataset).next()
 
-    l_channel = item[:, :, 0]
+    l_channel = item[:, :, :, 0]
 
-    target_ab = item[:, :, 1:]
+    target_ab = item[:, :, :, 1:]
     target_image = np.zeros(item.shape)
-    target_image[:, :, 0] = l_channel
-    target_image[:, :, 1:] = target_ab
+    target_image[:, :, :, 0] = l_channel
+    target_image[:, :, :, 1:] = target_ab
 
-    predicted_ab = model(np.reshape(l_channel, (1, 224, 224, 1)))
+    predicted_ab = model(np.reshape(l_channel, (-1, 224, 224, 1)))
     predicted_image = np.zeros(item.shape)
-    predicted_image[:, :, 0] = l_channel
-    predicted_image[:, :, 1:] = predicted_ab
+    predicted_image[:, :, :, 0] = l_channel
+    predicted_image[:, :, :, 1:] = predicted_ab
 
     target_rgb = tfio.experimental.color.lab_to_rgb(target_image)
     predicted_rgb = tfio.experimental.color.lab_to_rgb(predicted_image)
 
     with writer.as_default():
-        tf.summary.image('Target Lab', np.reshape(target_image, (1, 224, 224, 3)), step=epoch)
-        tf.summary.image('Result Lab', np.reshape(predicted_image, (1, 224, 224, 3)), step=epoch)
-        tf.summary.image('Target RGB', np.reshape(target_rgb, (1, 224, 224, 3)), step=epoch)
-        tf.summary.image('Result RGB', np.reshape(predicted_rgb, (1, 224, 224, 3)), step=epoch)
+        tf.summary.image('Target Lab', np.reshape(target_image, (-1, 224, 224, 3)), step=epoch)
+        tf.summary.image('Result Lab', np.reshape(predicted_image, (-11, 224, 224, 3)), step=epoch)
+        tf.summary.image('Target RGB', target_rgb, step=epoch)
+        tf.summary.image('Result RGB', predicted_rgb, step=epoch)
 
 
 def parse_proto_example(proto):
@@ -76,7 +76,8 @@ def create_dataset(filenames, batch_size):
 def build_model():
     model = Sequential()
 
-    model.add(RandomFlip(mode='horizontal'))
+    model.add(RandomCrop(100, 100))
+    model.add(Resizing(224, 224))
 
     model.add(InputLayer(input_shape=(224, 224, 1)))
 
@@ -106,11 +107,13 @@ def main():
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    train_dir = Path(current_dir + "/train_tfr")
+    train_dir = Path(current_dir + "/../train_tfr")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
+    file_list_train = tf.random.shuffle(file_list_train)
 
-    valid_dir = Path(current_dir + "/validation_tfr")
+    valid_dir = Path(current_dir + "/../validation_tfr")
     file_list_valid = [str(pp) for pp in valid_dir.glob("*")]
+    file_list_valid = tf.random.shuffle(file_list_valid)
 
     train_dataset = create_dataset(file_list_train, BATCH_SIZE)
     validation_dataset = create_dataset(file_list_valid, BATCH_SIZE)
