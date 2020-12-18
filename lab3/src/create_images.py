@@ -4,12 +4,13 @@ import os
 
 # Read the video from specified path
 cam = cv2.VideoCapture("C:\\Users\\Alex\\Desktop\\rewind.mp4")
+folder = '50kdatasetsmall'
 
 try:
 
     # creating a folder named data
-    if not os.path.exists('train'):
-        os.makedirs('train')
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
     # if not created then raise error
 except OSError:
@@ -18,15 +19,17 @@ except OSError:
 # frame
 currentframe = 0
 
-while True and currentframe < 5000:
+while True and currentframe < 50000:
 
     # reading from frame
     ret, frame = cam.read()
 
     if ret:
         # if video is still left continue creating images
-        name = './train/frame' + str(currentframe) + '.jpeg'
+        name = './'+folder+'/frame' + str(currentframe) + '.jpeg'
         print('Creating...' + name)
+
+        frame = cv2.resize(frame, (224, 224))
 
         # writing the extracted images
         cv2.imwrite(name, frame)

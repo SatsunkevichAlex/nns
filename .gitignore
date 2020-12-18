@@ -21,6 +21,10 @@ validation/
 validation_jpeg/
 validation_tfr/
 data/
+50kdataset/
+50kdataset*/
+50kdataset_tfr*/
+train_tfr_rest/
 
 # Distribution / packaging
 .Python

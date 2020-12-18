@@ -9,9 +9,9 @@ import tensorflow as tf
 import numpy as np
 from pathlib import Path
 from keras.layers import Conv2D, InputLayer, Conv2DTranspose
+from keras.layers.experimental.preprocessing import RandomFlip, RandomCrop, Resizing, RandomRotation
 from keras.models import Sequential
 import tensorflow_io as tfio
-from keras.layers.experimental.preprocessing import RandomFlip, RandomRotation
 
 
 SHUFFLE_BUFFER = 4
@@ -24,6 +24,8 @@ VALSET_SIZE = 3000
 
 config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(allow_growth=True))
 sess = tf.compat.v1.Session(config=config)
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
 def visualize_images(epoch, model, dataset, writer):
@@ -46,7 +48,7 @@ def visualize_images(epoch, model, dataset, writer):
 
     with writer.as_default():
         tf.summary.image('Target Lab', np.reshape(target_image, (-1, 224, 224, 3)), step=epoch)
-        tf.summary.image('Result Lab', np.reshape(predicted_image, (-1, 224, 224, 3)), step=epoch)
+        tf.summary.image('Result Lab', np.reshape(predicted_image, (-11, 224, 224, 3)), step=epoch)
         tf.summary.image('Target RGB', target_rgb, step=epoch)
         tf.summary.image('Result RGB', predicted_rgb, step=epoch)
 
@@ -76,8 +78,10 @@ def create_dataset(filenames, batch_size):
 def build_model():
     model = Sequential()
 
-    model.add(RandomRotation(factor=0.45))
     model.add(RandomFlip(mode='horizontal'))
+    model.add(RandomCrop(100, 100))
+    model.add(Resizing(224, 224))
+    model.add(RandomRotation(factor=0.45))
 
     model.add(InputLayer(input_shape=(224, 224, 1)))
 
@@ -107,14 +111,26 @@ def main():
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    train_dir = Path(current_dir + "/train_tfr")
+    # train_dir = Path(current_dir + "/50kdataset_tfr1")
+    train_dir = Path(current_dir + "/../50kdatasetsmall_tfr")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
 
-    valid_dir = Path(current_dir + "/validation_tfr")
+    valid_dir = Path(current_dir + "/../validation_tfr")
     file_list_valid = [str(pp) for pp in valid_dir.glob("*")]
 
     train_dataset = create_dataset(file_list_train, BATCH_SIZE)
+    c = 0
+    for fn in file_list_train:
+        for record in tf.data.TFRecordDataset(fn):
+            c += 1
+    print(f'Count of train images: {c}')
+
     validation_dataset = create_dataset(file_list_valid, BATCH_SIZE)
+    v = 0
+    for fn in file_list_valid:
+        for record in tf.data.TFRecordDataset(fn):
+            v += 1
+    print(f'Count of validation images: {v}')
 
     validation_y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in validation_dataset.as_numpy_iterator()]
 
