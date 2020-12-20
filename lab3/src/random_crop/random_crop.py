@@ -1,18 +1,16 @@
 __author__ = 'Alexander Soroka, soroka.a.m@gmail.com'
 __copyright__ = """Copyright 2020 Alexander Soroka"""
 
-
-import argparse
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from datetime import datetime
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
 from keras.layers import Conv2D, InputLayer, Conv2DTranspose
-from keras.layers.experimental.preprocessing import RandomCrop, Resizing
+from tensorflow.keras import layers
 from keras.models import Sequential
 import tensorflow_io as tfio
-
 
 SHUFFLE_BUFFER = 4
 BATCH_SIZE = 256
@@ -46,9 +44,16 @@ def visualize_images(epoch, model, dataset, writer):
 
     with writer.as_default():
         tf.summary.image('Target Lab', np.reshape(target_image, (-1, 224, 224, 3)), step=epoch)
-        tf.summary.image('Result Lab', np.reshape(predicted_image, (-11, 224, 224, 3)), step=epoch)
+        tf.summary.image('Result Lab', np.reshape(predicted_image, (-1, 224, 224, 3)), step=epoch)
         tf.summary.image('Target RGB', target_rgb, step=epoch)
         tf.summary.image('Result RGB', predicted_rgb, step=epoch)
+
+
+def visualize_images_augmented(epoch, dataset, writer):
+    item = dataset[0]
+
+    with writer.as_default():
+        tf.summary.image('Augmented', np.reshape(item, (-1, 224, 224, 3)), step=epoch)
 
 
 def parse_proto_example(proto):
@@ -76,10 +81,7 @@ def create_dataset(filenames, batch_size):
 def build_model():
     model = Sequential()
 
-    model.add(RandomCrop(100, 100))
-    model.add(Resizing(224, 224))
-
-    model.add(InputLayer(input_shape=(224, 224, 1)))
+    model.add(InputLayer(input_shape=(224, 224, 3)))
 
     model.add(Conv2D(1, (2, 2), activation='relu', padding='same'))
 
@@ -99,29 +101,44 @@ def build_model():
 
 
 def main():
-    args = argparse.ArgumentParser()
-    args.add_argument('--train', type=str, help='Glob pattern to collect train tfrecord files')
-    args.add_argument('--test', type=str, help='Glob pattern to collect test tfrecord files')
-
     log_dir = "C:/Users/Alex/Desktop/logs/train_data/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    file_writer = tf.summary.create_file_writer(log_dir)
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
     train_dir = Path(current_dir + "/../train_tfr")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
     file_list_train = tf.random.shuffle(file_list_train)
+    c = 0
+    for fn in file_list_train:
+        for record in tf.data.TFRecordDataset(fn):
+            c += 1
+    print(f'Count of train images: {c}')
 
     valid_dir = Path(current_dir + "/../validation_tfr")
     file_list_valid = [str(pp) for pp in valid_dir.glob("*")]
     file_list_valid = tf.random.shuffle(file_list_valid)
+    v = 0
+    for fn in file_list_valid:
+        for record in tf.data.TFRecordDataset(fn):
+            v += 1
+    print(f'Count of validation images: {v}')
 
     train_dataset = create_dataset(file_list_train, BATCH_SIZE)
+    data_augmentation = tf.keras.Sequential([
+        layers.experimental.preprocessing.RandomCrop(112, 112),
+        layers.experimental.preprocessing.Resizing(224, 224),
+        layers.experimental.preprocessing.RandomRotation(factor=0.45),
+        layers.experimental.preprocessing.RandomFlip(mode='horizontal')
+    ])
+    augmented = [data_augmentation(i) for i in train_dataset]
+
     validation_dataset = create_dataset(file_list_valid, BATCH_SIZE)
 
-    validation_y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in validation_dataset.as_numpy_iterator()][0]
+    validation_y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in validation_dataset]
 
-    x = [np.reshape(i[:, :, :, 0], (-1, 224, 224, 1)) for i in train_dataset.as_numpy_iterator()]
-    y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in train_dataset.as_numpy_iterator()]
+    x = [np.reshape(i[:, :, :, 0], (-1, 224, 224, 1)) for i in augmented]
+    y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in validation_dataset]
 
     model = build_model()
 
@@ -130,16 +147,18 @@ def main():
          loss=tf.keras.losses.mean_squared_error
     )
 
-    file_writer = tf.summary.create_file_writer(log_dir)
     model.fit(
         x=x.pop(),
         y=y.pop(),
         epochs=100,
-        validation_data=validation_y.all(),
+        validation_data=validation_y.pop().all(),
         callbacks=[
             tf.keras.callbacks.TensorBoard(log_dir),
             tf.keras.callbacks.LambdaCallback(
                 on_epoch_end=lambda epoch, logs: visualize_images(epoch, model, validation_dataset, file_writer)
+            ),
+            tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=lambda epoch, logs: visualize_images_augmented(epoch, augmented, file_writer)
             )
         ]
     )

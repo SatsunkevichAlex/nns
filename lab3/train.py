@@ -5,12 +5,12 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from datetime import datetime
 import tensorflow as tf
-import numpy as np
 from pathlib import Path
 from keras.layers import Conv2D, InputLayer, Conv2DTranspose
 from tensorflow.keras import layers
 from keras.models import Sequential
 import tensorflow_io as tfio
+import numpy as np
 
 SHUFFLE_BUFFER = 4
 BATCH_SIZE = 256
@@ -20,8 +20,10 @@ RESIZE_TO = 224
 TRAINSET_SIZE = 14034
 VALSET_SIZE = 3000
 
+
 config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(allow_growth=True))
 sess = tf.compat.v1.Session(config=config)
+
 
 def visualize_images(epoch, model, dataset, writer):
     item = iter(dataset).next()
@@ -46,6 +48,13 @@ def visualize_images(epoch, model, dataset, writer):
         tf.summary.image('Result Lab', np.reshape(predicted_image, (-1, 224, 224, 3)), step=epoch)
         tf.summary.image('Target RGB', target_rgb, step=epoch)
         tf.summary.image('Result RGB', predicted_rgb, step=epoch)
+
+
+def visualize_images_augmented(epoch, dataset, writer):
+    item = dataset[0]
+
+    with writer.as_default():
+        tf.summary.image('Augmented', np.reshape(item, (-1, 224, 224, 3)), step=epoch)
 
 
 def parse_proto_example(proto):
@@ -98,13 +107,23 @@ def main():
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    train_dir = Path(current_dir + "/../50kdatasetsmall_tfr")
+    train_dir = Path(current_dir + "/../train_tfr")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
     file_list_train = tf.random.shuffle(file_list_train)
+    c = 0
+    for fn in file_list_train:
+        for record in tf.data.TFRecordDataset(fn):
+            c += 1
+    print(f'Count of train images: {c}')
 
     valid_dir = Path(current_dir + "/../validation_tfr")
     file_list_valid = [str(pp) for pp in valid_dir.glob("*")]
     file_list_valid = tf.random.shuffle(file_list_valid)
+    v = 0
+    for fn in file_list_valid:
+        for record in tf.data.TFRecordDataset(fn):
+            v += 1
+    print(f'Count of validation images: {v}')
 
     train_dataset = create_dataset(file_list_train, BATCH_SIZE)
     data_augmentation = tf.keras.Sequential([
@@ -113,17 +132,17 @@ def main():
         layers.experimental.preprocessing.RandomRotation(factor=0.45),
         layers.experimental.preprocessing.RandomFlip(mode='horizontal')
     ])
-
     augmented = [data_augmentation(i) for i in train_dataset]
-    with file_writer.as_default():
-        tf.summary.image('Augmented1', np.reshape(augmented[1], (-1, 224, 224, 3)), step=0)
 
     validation_dataset = create_dataset(file_list_valid, BATCH_SIZE)
 
     validation_y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in validation_dataset]
+    validation_x = [np.reshape(i[:, :, :, 0], (-1, 224, 224, 1)) for i in validation_dataset]
 
     x = [np.reshape(i[:, :, :, 0], (-1, 224, 224, 1)) for i in augmented]
-    y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in validation_dataset]
+    x.pop()
+    y = [np.reshape(i[:, :, :, 1:], (-1, 224, 224, 2)) for i in augmented]
+    y.pop()
 
     model = build_model()
 
@@ -133,14 +152,17 @@ def main():
     )
 
     model.fit(
-        x=x.pop(),
-        y=y.pop(),
-        epochs=100,
-        validation_data=validation_y.pop().all(),
+        x=tf.concat(x, 0),
+        y=tf.concat(y, 0),
+        epochs=40,
+        validation_data=(validation_x, validation_y),
         callbacks=[
             tf.keras.callbacks.TensorBoard(log_dir),
             tf.keras.callbacks.LambdaCallback(
                 on_epoch_end=lambda epoch, logs: visualize_images(epoch, model, validation_dataset, file_writer)
+            ),
+            tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=lambda epoch, logs: visualize_images_augmented(epoch, augmented, file_writer)
             )
         ]
     )
