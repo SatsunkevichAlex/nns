@@ -190,6 +190,12 @@ if __name__ == '__main__':
 **Все вместе**
 ![all-together](https://github.com/SatsunkevichAlex/nns/blob/main/lab3/src/rotation-crop-flip/scalars.png)
 
+**50к изображений**
+![50k](https://github.com/SatsunkevichAlex/nns/blob/main/lab3/src/50k-learn/scalar.png)
+
+**Результат работы сети на 50к изображений**
+![50k-image](https://github.com/SatsunkevichAlex/nns/blob/main/lab3/src/50k-learn/images_result.png)
+
 **Изображение после аугментации**
 
 **Случайная часть изображения**
