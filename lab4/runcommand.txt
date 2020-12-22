@@ -1,0 +1,1 @@
+python "D:\temp\build_image_data.py" --input "D:\temp\5kimages-jpeg" --output "D:\temp\validation_tfr"
