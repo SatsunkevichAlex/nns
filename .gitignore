@@ -25,6 +25,8 @@ data/
 50kdataset*/
 50kdataset_tfr*/
 train_tfr_rest/
+5kimages-jpeg/
+validation_backup/
 
 # Distribution / packaging
 .Python

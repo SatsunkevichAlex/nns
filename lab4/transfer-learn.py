@@ -33,7 +33,7 @@ def generator_train():
     ])
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    train_dir = Path(current_dir + f"/../{TRAIN_FOLDER}")
+    train_dir = Path(current_dir + f"/{TRAIN_FOLDER}")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
     i = 0;
     for fn in file_list_train:
@@ -47,7 +47,7 @@ def generator_train():
 
 def generator_valid():
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    train_dir = Path(current_dir + f"/../{VALIDATION_FOLDER}")
+    train_dir = Path(current_dir + f"/{VALIDATION_FOLDER}")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
     i = 0;
     for fn in file_list_train:
@@ -71,9 +71,31 @@ def visualize_images(epoch, model, dataset, writer):
     predicted_image = np.zeros((l_channel.shape[0], l_channel.shape[1], l_channel.shape[2], 3))
     predicted_image[:, :, :, 0] = np.reshape(l_channel, (-1, 224, 224))
     predicted_image[:, :, :, 1:] = predicted_ab
+    maxl = tf.math.reduce_max(target_image)
+    minl = tf.math.reduce_min(target_image)
+    meanl = tf.math.reduce_mean(target_image)
+    print(f'Info about image in Lab format')
+    print(f'Max in target: {maxl}, min: {minl}, mean: {meanl}')
 
-    target_rgb = tfio.experimental.color.lab_to_rgb(target_image) * 256
-    predicted_rgb = tfio.experimental.color.lab_to_rgb(predicted_image * 256)
+    maxlp = tf.math.reduce_max(predicted_image)
+    minlp = tf.math.reduce_min(predicted_image)
+    meanlp = tf.math.reduce_mean(predicted_image)
+    print(f'Max in predicted: {maxlp}, min: {minlp}, mean: {meanlp}')
+
+    target_rgb = tfio.experimental.color.lab_to_rgb(target_image)
+    target_rgb = tf.math.multiply(target_rgb, 256)
+    predicted_rgb = tfio.experimental.color.lab_to_rgb(predicted_image) * 256
+
+    max = tf.math.reduce_max(target_rgb)
+    min = tf.math.reduce_min(target_rgb)
+    mean = tf.math.reduce_mean(target_rgb)
+    print(f'Info about image in RGB format')
+    print(f'Max in target: {max}, min: {min}, mean: {mean}')
+
+    maxp = tf.math.reduce_max(predicted_rgb)
+    minp = tf.math.reduce_min(predicted_rgb)
+    meanp = tf.math.reduce_mean(predicted_rgb)
+    print(f'Max in predicted: {maxp}, min: {minp}, mean: {meanp}')
 
     with writer.as_default():
         tf.summary.image('Target Lab', np.reshape(target_image, (-1, 224, 224, 3)), step=epoch)
@@ -118,7 +140,7 @@ def create_dataset(filenames, batch_size):
 
 def display_image_count():
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    train_dir = Path(current_dir + f"/../{TRAIN_FOLDER}")
+    train_dir = Path(current_dir + f"/{TRAIN_FOLDER}")
     file_list_train = [str(pp) for pp in train_dir.glob("*")]
     file_list_train = tf.random.shuffle(file_list_train)
     c = 0
@@ -127,7 +149,7 @@ def display_image_count():
             c += 1
     print(f'Count of train images: {c}')
 
-    valid_dir = Path(current_dir + f"/../{VALIDATION_FOLDER}")
+    valid_dir = Path(current_dir + f"/{VALIDATION_FOLDER}")
     file_list_valid = [str(pp) for pp in valid_dir.glob("*")]
     file_list_valid = tf.random.shuffle(file_list_valid)
     v = 0
@@ -169,7 +191,7 @@ def main():
     model = tf.keras.Model(inputs, outputs)
 
     model.compile(
-         optimizer=tf.optimizers.Adam(lr=0.01),
+         optimizer=tf.optimizers.SGD(lr=0.001, momentum=0.9),
          loss=tf.keras.losses.mean_squared_error
     )
 
@@ -184,9 +206,9 @@ def main():
             tf.keras.callbacks.LambdaCallback(
                 on_epoch_end=lambda epoch, logs: visualize_images(epoch, model, valid, file_writer)
             ),
-            tf.keras.callbacks.LambdaCallback(
-                on_epoch_end=lambda epoch, logs: visualize_images_augmented(epoch, train, file_writer)
-            )
+            # tf.keras.callbacks.LambdaCallback(
+            #     on_epoch_end=lambda epoch, logs: visualize_images_augmented(epoch, train, file_writer)
+            # )
         ]
     )
 
