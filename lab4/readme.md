@@ -220,6 +220,7 @@ if __name__ == '__main__':
 ```
 
 **Логи**
+```
 C:\Python38\python.exe D:/nns/lab4/transfer-learn.py
 2020-12-23 17:03:57.464821: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cudart64_110.dll
 2020-12-23 17:04:03.347147: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2
@@ -349,6 +350,7 @@ Max in target: 7.37346924186825, min: 0.0, mean: 1.997530414160506
 Max in predicted: 5.192003512639624, min: 0.0, mean: 1.9611567474539484
 
 Process finished with exit code 0
+```
 
 **Рузльтаты**
 Запуск 1. optimizer=tf.optimizers.Adam(lr=0.01)
